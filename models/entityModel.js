@@ -5,12 +5,6 @@ const entitySchema = new mongoose.Schema(
       type: String,
       unique: true,
     },
-    //allowedUsers: [
-    //  {
-    //    type: mongoose.Schema.ObjectId,
-    //    ref: "User",
-    //  },
-    //],
     management: {
       type: mongoose.Schema.ObjectId,
       ref: "Management",
