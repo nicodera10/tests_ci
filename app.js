@@ -3,7 +3,7 @@ const express = require("express");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
-//const mongoSanitize = require("express-mongo-sanitize");
+// const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 const hpp = require("hpp");
 const moment = require("moment-timezone");
@@ -19,10 +19,9 @@ const entitiesRouter = require("./routes/entityRoutes");
 const employeesRouter = require("./routes/employeeRoutes");
 const ressourcesRouter = require("./routes/ressourceRoutes");
 const formEmployeesRouter = require("./routes/formEmployeeRoutes");
+const absenceRequestRoutes = require("./routes/absenceRequestRoutes");
 
 const app = express();
-
-//const server = require("http").Server(app);
 
 moment.tz("Europe/Paris").format();
 // Set security HTTP headers
@@ -66,9 +65,11 @@ app.use("/api/v1/employees", employeesRouter);
 app.use("/api/v1/formemployees", formEmployeesRouter);
 app.use("/api/v1/contact", contactRouter);
 app.use("/api/v1/ressources", ressourcesRouter);
+app.use("/api/v1/absence-requests", absenceRequestRoutes);
 app.use("/__webpack_hmr/client", blockLimiter);
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 app.use(globalErrorHandler);
+
 module.exports = app;

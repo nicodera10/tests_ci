@@ -236,56 +236,139 @@ exports.uploadAbsenceDocs = uploadAbsence.array("docs", 10);
 exports.addAbsence = catchAsync(async (req, res, next) => {
   const entityId = req.params.id;
   const data = JSON.parse(req.body.data);
-  const employee = await Employee.findById(data.employeeId);
+  console.log('Request data:', data);
+
+  let employee;
+  let user;
+  let employer;
+
+  // Chercher l'utilisateur par ID
+  try {
+    user = await User.findById(data.employeeId);
+  } catch (error) {
+    console.error('Error finding user:', error);
+  }
+
+  if (user) {
+    // Récupérer l'ID de l'employé référencé dans l'utilisateur, si le rôle est "employee"
+    if (user.role === 'employee') {
+      const employeeId = user.employeeId;
+      if (!employeeId) {
+        console.log('No employee reference found in user');
+        return next(new AppError("No employee reference found in user", 404));
+      }
+
+      // Chercher l'employé correspondant à l'ID récupéré
+      employee = await Employee.findById(employeeId);
+      if (!employee) {
+        console.log('No employee found with that ID');
+        return next(new AppError("No employee found with that ID", 404));
+      }
+
+      // Récupérer l'employeur associé en utilisant le champ customerOf
+      employer = await User.findOne({ customerOf: user.customerOf, role: 'employer' });
+      if (!employer) {
+        console.log('No employer found for the employee');
+        return next(new AppError("No employer found for the employee", 404));
+      }
+    } else {
+      // Si le rôle est "employer", chercher directement l'employé par l'ID fourni
+      employee = await Employee.findById(data.employeeId);
+      if (!employee) {
+        console.log('No employee found with that ID');
+        return next(new AppError("No employee found with that ID", 404));
+      }
+    }
+  } else {
+    // Si l'utilisateur n'est pas trouvé, chercher directement dans la collection Employee
+    employee = await Employee.findById(data.employeeId);
+    if (!employee) {
+      console.log('No employee found with that ID');
+      return next(new AppError("No employee found with that ID", 404));
+    }
+  }
+
   const company = await Entity.findById(entityId);
   let entryAbsence = company.entryAbsence || [];
-  if (!employee) {
-    return next(new AppError("No document found with that ID", 404));
-  }
-  
+
   const files = req.files;
   const filesKeys = [];
   files.forEach((file) => {
     filesKeys.push(`<br/> https://docs.easy-paies.fr/${file.key}`);
   });
-  var htmlFileKeys = filesKeys.forEach((fileKey) => {
-    return `<br/> ${fileKey}`;
-  });
-  
+  console.log('Files uploaded:', filesKeys);
+
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   let startDate = new Date(data.beginDate);
   let endDate = new Date(data.endDate);
 
-  entryAbsence.push({
-    matricule: employee.matricule,
+  // Ajout de l'absence avec le matricule
+  const newAbsence = {
+    matricule: employee.matricule, // S'assurer que le matricule est inclus
     code: data.absenceType,
     value: 1,
     startDate: startDate.toLocaleDateString("fr"),
     endDate: endDate.toLocaleDateString("fr"),
-  });
+  };
 
-  await Entity.updateOne({ _id: entityId },
-    {entryAbsence: entryAbsence}
-  );
-  
-  console.log(filesKeys.toString());
+  entryAbsence.push(newAbsence);
 
-  await sendEmail({
-    email: `${data.mailTo}`,
-    subject: `Nouvelle absence pour ${data.entityName}`,
-    replyTo: `${data.mailTo}`,
-    message: `Bonjour,
-    <br/><br/> Une nouvelle absence employé a été saisie pour ${data.entityName}
-    <br/><br/> Voici les informations :
-    <br/><br/>Employé : ${employee.firstName} ${employee.lastName},
-    <br/>Matricule : ${employee.matricule},
-    <br/>Type d'absence code : ${data.absenceType},
-    <br/>Date de début : ${startDate.toLocaleDateString("fr-FR", options)},
-    <br/>Date de fin : ${endDate.toLocaleDateString("fr-FR", options)},
-    <br/> Justificatif : ${filesKeys.toString()},
-    <br/><br/>Ceci est un message automatique, merci de ne pas y répondre,
-    `,
-  });
+  try {
+    await Entity.updateOne(
+      { _id: entityId },
+      { $push: { entryAbsence: newAbsence } } // Utilisation de $push pour ajouter à entryAbsence
+    );
+    console.log('Entity updated with new absence');
+  } catch (error) {
+    console.error('Error updating entity:', error);
+    return next(new AppError('Failed to update entity with absence', 500));
+  }
+
+  try {
+    // Envoi de l'email à l'unité de gestion de paye
+    await sendEmail({
+      email: `${data.mailTo}`,
+      subject: `Nouvelle absence pour ${data.entityName}`,
+      replyTo: `${data.mailTo}`,
+      message: `Bonjour,
+      <br/><br/> Une nouvelle absence employé a été saisie pour ${data.entityName}
+      <br/><br/> Voici les informations :
+      <br/><br/>Employé : ${employee.firstName} ${employee.lastName},
+      <br/>Matricule : ${employee.matricule},
+      <br/>Type d'absence code : ${data.absenceType},
+      <br/>Date de début : ${startDate.toLocaleDateString("fr-FR", options)},
+      <br/>Date de fin : ${endDate.toLocaleDateString("fr-FR", options)},
+      <br/> Justificatif : ${filesKeys.toString()},
+      <br/><br/>Ceci est un message automatique, merci de ne pas y répondre,
+      `,
+    });
+
+    // Envoi de l'email à l'employeur
+    if (employer) {
+      await sendEmail({
+        email: employer.email,
+        subject: `Nouvelle absence pour ${data.entityName}`,
+        replyTo: `${data.mailTo}`,
+        message: `Bonjour,
+        <br/><br/> Une nouvelle absence employé a été saisie pour ${data.entityName}
+        <br/><br/> Voici les informations :
+        <br/><br/>Employé : ${employee.firstName} ${employee.lastName},
+        <br/>Matricule : ${employee.matricule},
+        <br/>Type d'absence code : ${data.absenceType},
+        <br/>Date de début : ${startDate.toLocaleDateString("fr-FR", options)},
+        <br/>Date de fin : ${endDate.toLocaleDateString("fr-FR", options)},
+        <br/> Justificatif : ${filesKeys.toString()},
+        <br/><br/>Ceci est un message automatique, merci de ne pas y répondre,
+        `,
+      });
+      console.log('Email sent to employer successfully');
+    }
+
+    console.log('Email sent successfully');
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return next(new AppError('Failed to send email notification', 500));
+  }
 
   res.status(200).json({
     status: "success",
@@ -332,3 +415,20 @@ exports.generatePaySlips = catchAsync(async (req, res, next) => {
     },
   });
 });
+exports.requestAdvance = async (req, res) => {
+  try {
+    const { amount, reason, employeeId } = req.body;
+
+    const entity = await Entity.findById(req.params.id);
+    if (!entity) {
+      return res.status(404).json({ message: 'Entity not found' });
+    }
+
+    entity.entryAdvance.push({ employeeId, amount, reason });
+    await entity.save();
+
+    res.status(200).json({ message: 'Advance request added successfully', entity });
+  } catch (error) {
+    res.status(500).json({ message: 'An error occurred', error });
+  }
+};

@@ -24,8 +24,8 @@ router
   );
 
 router
-    .route("/addSalaryElements/:id")
-    .patch(entityController.addSalaryElements);
+  .route("/addSalaryElements/:id")
+  .patch(entityController.addSalaryElements);
 
 router
   .route("/absence/:id")
@@ -43,5 +43,10 @@ router
   .get(entityController.getOneEntity)
   .patch(entityController.updateEntity)
   .delete(entityController.deleteEntity);
+
+// Ajout de la route pour les demandes d'acompte
+router
+  .route("/:id/requestAdvance")
+  .patch(entityController.requestAdvance);
 
 module.exports = router;

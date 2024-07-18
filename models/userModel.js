@@ -48,6 +48,11 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "Entity",
     },
+    employeeId: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Employee",
+      required: function() { return this.role === 'employee'; } 
+    },
     firstConnection: {
       type: Boolean,
       default: true,
@@ -77,8 +82,6 @@ userSchema.pre("save", async function (next) {
   // Hash the password with cost of 12
   this.password = await bcrypt.hash(this.password, 12);
 
-  // Delete passwordConfirm field
-  this.passwordConfirm = undefined;
   next();
 });
 
@@ -111,7 +114,6 @@ userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
     return JWTTimestamp < changedTimestamp;
   }
 
-  // False means NOT changed
   return false;
 };
 
@@ -120,7 +122,7 @@ userSchema.methods.createPasswordResetToken = function () {
     length: 12,
     numbers: true,
     symbols: true,
-    strict : true
+    strict: true
   });
 
   this.passwordResetToken = crypto
@@ -130,6 +132,7 @@ userSchema.methods.createPasswordResetToken = function () {
 
   return password;
 };
+
 userSchema.methods.createEmailToken = function () {
   const resetToken = crypto.randomBytes(4).toString("hex");
 
@@ -138,21 +141,23 @@ userSchema.methods.createEmailToken = function () {
     .update(resetToken)
     .digest("hex");
 
-  //console.log({ resetToken }, this.passwordResetToken);
-
   this.mailValidationExpires = Date.now() + 10 * 60 * 1000;
 
   return resetToken;
 };
+
 userSchema.pre(/^find/, function (next) {
-  this.populate({ path: "managerOf" }).populate({
-    path: "customerOf",
-    populate: {
-      path: "management",
-    },
-  });
+  this.populate({ path: "managerOf" })
+    .populate({
+      path: "customerOf",
+      populate: {
+        path: "management",
+      },
+    })
+    .populate("employeeId");
   next();
 });
+
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;
