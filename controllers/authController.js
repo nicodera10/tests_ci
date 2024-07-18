@@ -56,7 +56,7 @@ const signToken = (id) =>
     });
   };
   
-  exports.signupClient = catchAsync(async (req, res, next) => {
+  const signupClient = catchAsync(async (req, res, next) => {
     const firstName = req.body.firstName.charAt(0).toUpperCase() + req.body.firstName.slice(1);
     const lastName = req.body.lastName.charAt(0).toUpperCase() + req.body.lastName.slice(1);
     const password = generator.generate({
@@ -112,12 +112,10 @@ const signToken = (id) =>
     createSendToken(newUser, 201, res);
   });
 
-exports.signup = catchAsync(async (req, res, next) => {
+const signup = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
-    firstName:
-      req.body.firstName.charAt(0).toUpperCase() + req.body.firstName.slice(1),
-    lastName:
-      req.body.lastName.charAt(0).toUpperCase() + req.body.lastName.slice(1),
+    firstName: req.body.firstName.charAt(0).toUpperCase() + req.body.firstName.slice(1),
+    lastName: req.body.lastName.charAt(0).toUpperCase() + req.body.lastName.slice(1),
     email: req.body.email,
     password: req.body.password,
     managerOf: req.body.managerOf,
@@ -127,7 +125,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   createSendToken(newUser, 201, res);
 });
 
-exports.login = catchAsync(async (req, res, next) => {
+const login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   // 1) Check if email and password exist
@@ -154,7 +152,7 @@ exports.login = catchAsync(async (req, res, next) => {
   await createSendToken(user, 200, res);
 });
 
-exports.updatePassword = catchAsync(async (req, res, next) => {
+const updatePassword = catchAsync(async (req, res, next) => {
   // 1) Get user from collection
   const user = await User.findById(req.user.id).select("+password");
 
@@ -173,7 +171,7 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res);
 });
 
-exports.initPassword = catchAsync(async (req, res, next) => {
+const initPassword = catchAsync(async (req, res, next) => {
   // 1) Get user from collection
   const user = await User.findById(req.user.id).select("+password");
 
@@ -188,8 +186,8 @@ exports.initPassword = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res);
 });
 
-exports.protect = catchAsync(async (req, res, next) => {
-  // 1) Getting token and check if it's there
+const protect = catchAsync(async (req, res, next) => {
+  // 1) Getting token and check of it's there
   let token;
   if (
     req.headers.authorization &&
@@ -237,7 +235,7 @@ exports.protect = catchAsync(async (req, res, next) => {
   next();
 });
 
-exports.restrictTo = (...roles) => (req, res, next) => {
+const restrictTo = (...roles) => (req, res, next) => {
   // roles ['admin', 'lead-guide']. role='user'
   if (!roles.includes(req.user.role)) {
     return next(
@@ -248,7 +246,7 @@ exports.restrictTo = (...roles) => (req, res, next) => {
   next();
 };
 
-exports.forgotPassword = catchAsync(async (req, res, next) => {
+const forgotPassword = catchAsync(async (req, res, next) => {
   // 1) Get user based on POSTed email
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
@@ -287,7 +285,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   }
 });
 
-exports.csv = catchAsync(async (req, res, next) => {
+const csv = catchAsync(async (req, res, next) => {
   // 1) Get user based on POSTed email
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
@@ -316,3 +314,18 @@ exports.csv = catchAsync(async (req, res, next) => {
     );
   }
 });
+
+// Regroup all exports
+module.exports = {
+  signToken,
+  createSendToken,
+  signupClient,
+  signup,
+  login,
+  updatePassword,
+  initPassword,
+  protect,
+  restrictTo,
+  forgotPassword,
+  csv
+};
