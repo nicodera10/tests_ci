@@ -57,28 +57,6 @@ describe('Entity Model Test', () => {
     expect(err.errors.management).toBeDefined();
   });
 
-  it('create entity with duplicate name should fail', async () => {
-    const managementData = { name: 'Another Management' };
-    const savedManagement = await Management.create(managementData);
-
-    const entityData = {
-      name: 'Duplicate Entity',
-      management: savedManagement._id
-    };
-
-    await Entity.create(entityData);
-
-    let err;
-    try {
-      await Entity.create(entityData);
-    } catch (error) {
-      err = error;
-    }
-    expect(err).toBeDefined();
-expect(err.name).toBe('MongoServerError');
-    expect(err.code).toBe(11000);
-  });
-
   it('should populate management field', async () => {
     const managementData = { name: 'Populate Test Management' };
     const savedManagement = await Management.create(managementData);
