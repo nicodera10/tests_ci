@@ -22,3 +22,17 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
     - run: npm test
+      env:
+        DATABASE: ${{ secrets.DATABASE }}
+        DATABASE_LOCAL: ${{ secrets.DATABASE_LOCAL }}
+        DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+        NODE_ENV: ${{ secrets.NODE_ENV }}
+        PORT: ${{ secrets.PORT }}
+        HOST: ${{ secrets.HOST }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
+        JWT_COOKIE_EXPIRES_IN: ${{ secrets.JWT_COOKIE_EXPIRES_IN }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        REGION: ${{ secrets.REGION }}
+        SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}

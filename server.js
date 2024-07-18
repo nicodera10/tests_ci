@@ -7,33 +7,21 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-dotenv.config({ path: "./config.env" });
+// Charger les variables d'environnement seulement si nous ne sommes pas en production
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: "./config.env" });
+}
+
 const app = require("./app");
 
-// const DB = process.env.DATABASE.replace(
-//   "<PASSWORD>",
-//   process.env.DATABASE_PASSWORD
-// );
-
-// const util = require('util');
-// const exec = util.promisify(require('child_process').exec);
-
-// const ping = async (host) => {
-//   const {stdout, stderr} = await exec(`ping -c 5 ${host}`);
-//   console.log(stdout);
-//   console.log(stderr);
-// }
-
-
-const DB = process.env.DATABASE_LOCAL;
+// Utiliser DATABASE_LOCAL pour le développement local et DATABASE pour la production
+const DB = process.env.NODE_ENV === 'production' ? process.env.DATABASE : process.env.DATABASE_LOCAL;
 
 mongoose.connect(DB).then(() => console.log("DB connection successful!"));
 
 const port = process.env.PORT || 3000;
-
 const server = app.listen(port, () => {
   console.log(`App running on port ${port}...`);
-  // ping(process.env.HOST);
 });
 
 process.on("unhandledRejection", (err) => {
